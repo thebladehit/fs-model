@@ -22,7 +22,7 @@ export class OS {
   stat(fileName: string): void {
     this.invokeMethod(() => {
       const [dId, d] = this.fs.stat(fileName);
-      this.logger.log(`id=${dId}, type=${d.type}, nlink=${d.links}, size=${d.size}, nblock=${d.blocks}`);
+      this.logger.log(`id=${dId}, type=${d.type}, nlink=${d.links}, size=${d.size}, nblock=${d.blocks.length}`);
     });
   }
 

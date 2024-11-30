@@ -1,6 +1,6 @@
 export class Logger {
   log(message: string): void {
-    console.log(`INFO: ${message}`);
+    console.log(message);
   }
 
   error(message: string): void {

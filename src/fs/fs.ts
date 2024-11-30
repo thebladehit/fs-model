@@ -62,7 +62,7 @@ export class FS {
     delete this.openFiles[fd];
     const descriptor = this.descriptors[file.descriptorId];
     if (descriptor.links === 0) {
-      this.freeBlocks(descriptor);
+      this.freeBlocks(descriptor, file.descriptorId);
     }
     if (Object.keys(this.openFiles).length === 0) {
       this.fdCounter = 0;
@@ -122,7 +122,8 @@ export class FS {
         throw new Error('No block data');
       }
       const bytesToRead = blockOffset + size >= this.blockSize ? this.blockSize : blockOffset + size;
-      bytesRead += block.slice(blockOffset, bytesToRead).toString();
+      const processedBlock = block.map((byte) => (byte === 0 || byte === undefined ? 48 : byte));
+      bytesRead += processedBlock.slice(blockOffset, bytesToRead).toString();
       file.offset += bytesToRead;
     }
     return bytesRead;
@@ -151,7 +152,7 @@ export class FS {
     const descriptor = this.descriptors[descriptorId];
     descriptor.links--;
     if (descriptor.links === 0) {
-      this.freeBlocks(descriptor);
+      this.freeBlocks(descriptor, descriptorId);
     }
     delete this.directory[fileName];
   }
@@ -172,7 +173,9 @@ export class FS {
     return file;
   }
 
-  private freeBlocks(descriptor: Descriptor): void {
+  private freeBlocks(descriptor: Descriptor, descriptorId: number): void {
+    const isFileOpened = Object.values(this.openFiles).findIndex(file => file.descriptorId === descriptorId) !== -1;
+    if (isFileOpened) return;
     descriptor.blocks.forEach(blockId => {
       this.bitmap[blockId] = 0;
       this.blocks[blockId] = null;
