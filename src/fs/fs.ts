@@ -2,7 +2,6 @@ import { Descriptor, DescriptorType } from '../interfaces/descriptor';
 
 export class FS {
   private blockSize: number;
-  private blockCount: number;
   private blocks: (Buffer | null)[];
   private bitmap: number[];
   private descriptors: (Descriptor | null)[];
@@ -13,7 +12,6 @@ export class FS {
 
   constructor(blockSize: number, blockCount: number, descriptorsCount: number, maxFileName: number) {
     this.blockSize = blockSize;
-    this.blockCount = blockCount;
     this.blocks = Array(blockCount).fill(null);
     this.bitmap = Array(blockCount).fill(0);
     this.descriptors = Array(descriptorsCount).fill(null);
@@ -24,15 +22,15 @@ export class FS {
   }
 
   create(fileName: string): void {
-    const descriptorId = this.getFreeDescriptor();
-    if (descriptorId === -1) {
-      throw new Error('No free descriptor');
-    }
     if (this.directory[fileName] !== undefined) {
       throw new Error(`File with name ${fileName} already exists`);
     }
     if (fileName.length > this.maxFileName) {
       throw new Error('File name should be shorter than ' + this.maxFileName);
+    }
+    const descriptorId = this.getFreeDescriptor();
+    if (descriptorId === -1) {
+      throw new Error('No free descriptor');
     }
     this.descriptors[descriptorId] = {
       type: DescriptorType.REGULAR,
@@ -44,10 +42,7 @@ export class FS {
   }
 
   stat(fileName: string): Descriptor {
-    const descriptorId = this.directory[fileName];
-    if (descriptorId === undefined) {
-      throw new Error(`File ${fileName} not found`);
-    }
+    const descriptorId = this.getDescriptionId(fileName);
     return this.descriptors[descriptorId];
   }
 
@@ -56,20 +51,14 @@ export class FS {
   }
 
   open(fileName: string): number {
-    const descriptorId = this.directory[fileName];
-    if (descriptorId === undefined) {
-      throw new Error(`File ${fileName} not found`);
-    }
+    const descriptorId = this.getDescriptionId(fileName);
     const fd = this.fdCounter++;
     this.openFiles[fd] = { descriptorId, offset: 0 };
     return fd;
   }
 
   close(fd: number): void {
-    const file = this.openFiles[fd];
-    if (!file) {
-      throw new Error(`File with FD ${fd} not opened`);
-    }
+    const file = this.getOpenedFile(fd);
     delete this.openFiles[fd];
     const descriptor = this.descriptors[file.descriptorId];
     if (descriptor.links === 0) {
@@ -81,10 +70,7 @@ export class FS {
   }
 
   seek(fd: number, offset: number): void {
-    const file = this.openFiles[fd];
-    if (!file) {
-      throw new Error(`File with FD ${fd} not opened`);
-    }
+    const file = this.getOpenedFile(fd);
     if (offset < 0 || offset > this.descriptors[file.descriptorId].size) {
       throw new Error('Invalid offset');
     }
@@ -92,10 +78,7 @@ export class FS {
   }
 
   write(fd: number, size: number, data: Buffer): void {
-    const file = this.openFiles[fd];
-    if (!file) {
-      throw new Error(`File with FD ${fd} not opened`);
-    }
+    const file = this.getOpenedFile(fd);
     const descriptor = this.descriptors[file.descriptorId];
     let bytesWritten = 0;
     while (bytesWritten < size) {
@@ -124,10 +107,7 @@ export class FS {
   }
 
   read(fd: number, size: number): string {
-    const file = this.openFiles[fd];
-    if (!file) {
-      throw new Error(`File with FD ${fd} not opened`);
-    }
+    const file = this.getOpenedFile(fd);
     const descriptor = this.descriptors[file.descriptorId];
     let bytesRead = '';
     while (bytesRead.length < size) {
@@ -149,10 +129,7 @@ export class FS {
   }
 
   truncate(fileName: string, newSize: number): void {
-    const descriptorId = this.directory[fileName];
-    if (descriptorId === undefined) {
-      throw new Error(`File ${fileName} not found`);
-    }
+    const descriptorId = this.getDescriptionId(fileName);
     const descriptor = this.descriptors[descriptorId];
     if (newSize < descriptor.size) {
       throw new Error('You can not set smaller file size than actual');
@@ -161,10 +138,7 @@ export class FS {
   }
 
   link(fileName: string, newName: string): void {
-    const descriptorId = this.directory[fileName];
-    if (descriptorId === undefined) {
-      throw new Error(`File ${fileName} not found`);
-    }
+    const descriptorId = this.getDescriptionId(fileName);
     if (this.directory[newName] !== undefined) {
       throw new Error(`File with name ${fileName} already exists`);
     }
@@ -173,16 +147,29 @@ export class FS {
   }
 
   unlink(fileName: string): void {
-    const descriptorId = this.directory[fileName];
-    if (descriptorId === undefined) {
-      throw new Error(`File ${fileName} not found`);
-    }
+    const descriptorId = this.getDescriptionId(fileName);
     const descriptor = this.descriptors[descriptorId];
     descriptor.links--;
     if (descriptor.links === 0) {
       this.freeBlocks(descriptor);
     }
     delete this.directory[fileName];
+  }
+
+  private getDescriptionId(fileName: string): number {
+    const descriptorId = this.directory[fileName];
+    if (descriptorId === undefined) {
+      throw new Error(`File ${fileName} not found`);
+    }
+    return descriptorId;
+  }
+
+  private getOpenedFile(fd: number): { descriptorId: number, offset: number } {
+    const file = this.openFiles[fd];
+    if (!file) {
+      throw new Error(`File with FD ${fd} not opened`);
+    }
+    return file;
   }
 
   private freeBlocks(descriptor: Descriptor): void {
