@@ -41,9 +41,9 @@ export class FS {
     this.directory[fileName] = descriptorId;
   }
 
-  stat(fileName: string): Descriptor {
+  stat(fileName: string): [number, Descriptor] {
     const descriptorId = this.getDescriptionId(fileName);
-    return this.descriptors[descriptorId];
+    return [descriptorId, this.descriptors[descriptorId]];
   }
 
   ls(): Record<string, number> {
