@@ -1,0 +1,34 @@
+import { Logger } from './logger/logger';
+import { OS } from './os/os';
+import config from './config/config';
+
+const logger = new Logger();
+const os = new OS(logger, config);
+
+os.mkfs(5);
+os.ls();
+os.create('text.txt');
+os.ls();
+os.link('text.txt', 'newtext.txt');
+os.ls();
+os.stat('text.txt');
+os.unlink('text.txt');
+os.stat('newtext.txt');
+os.truncate('newtext.txt', 1000);
+os.stat('newtext.txt');
+os.open('newtext.txt');
+os.write(0, 10, 'hello the!');
+os.stat('newtext.txt');
+os.seek(0, 5);
+os.read(0, 5);
+os.seek(0, 129);
+os.write(0, 2, '22');
+os.stat('newtext.txt');
+os.seek(0, 0);
+os.read(0, 102);
+os.unlink('newtext.txt');
+os.stat('newtext.txt');
+os.read(0, 10);
+os.close(0);
+os.read(0, 10);
+os.ls();
