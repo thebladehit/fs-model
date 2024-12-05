@@ -7,7 +7,7 @@ export class FS {
   private descriptors: (Descriptor | null)[];
   private directory: Record<string, number>;
   private openFiles: Record<number, { descriptorId: number, offset: number }>;
-  private fdCounter: number;
+  private fdCounter: boolean[];
   private maxFileName: number;
 
   constructor(blockSize: number, blockCount: number, descriptorsCount: number, maxFileName: number) {
@@ -17,7 +17,7 @@ export class FS {
     this.descriptors = Array(descriptorsCount).fill(null);
     this.directory = {};
     this.openFiles = {};
-    this.fdCounter = 0;
+    this.fdCounter = [];
     this.maxFileName = maxFileName;
   }
 
@@ -52,7 +52,7 @@ export class FS {
 
   open(fileName: string): number {
     const descriptorId = this.getDescriptionId(fileName);
-    const fd = this.fdCounter++;
+    const fd = this.getTheLowesFdCounter();
     this.openFiles[fd] = { descriptorId, offset: 0 };
     return fd;
   }
@@ -64,8 +64,9 @@ export class FS {
     if (descriptor.links === 0) {
       this.freeBlocks(descriptor, file.descriptorId);
     }
+    this.fdCounter[fd] = false;
     if (Object.keys(this.openFiles).length === 0) {
-      this.fdCounter = 0;
+      this.fdCounter = [];
     }
   }
 
@@ -180,6 +181,15 @@ export class FS {
       this.bitmap[blockId] = 0;
       this.blocks[blockId] = null;
     })
+  }
+
+  private getTheLowesFdCounter(): number {
+    for (let index in this.fdCounter) {
+      if (!this.fdCounter[index]) {
+        return +index;
+      }
+    }
+    return this.fdCounter.push(true) - 1;
   }
 
   private getFreeDescriptor() {
