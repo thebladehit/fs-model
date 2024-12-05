@@ -116,7 +116,7 @@ export class FS {
       const blockOffset = file.offset % this.blockSize;
       const blockId = descriptor.blocks[blockIndex];
       if (blockId === null || blockId === undefined) {
-        throw new Error('Block is not found');
+        break;
       }
       const block = this.blocks[blockId];
       if (!block) {
@@ -127,6 +127,10 @@ export class FS {
       bytesRead += processedBlock.slice(blockOffset, bytesToRead).toString();
       file.offset += bytesToRead;
     }
+    if (bytesRead.length < size) {
+      const delta = size - bytesRead.length;
+      bytesRead += Array(delta).fill(0).join('');
+    }
     return bytesRead;
   }
 
@@ -134,7 +138,12 @@ export class FS {
     const descriptorId = this.getDescriptionId(fileName);
     const descriptor = this.descriptors[descriptorId];
     if (newSize < descriptor.size) {
-      throw new Error('You can not set smaller file size than actual');
+      const remainsBlocksCount = Math.floor(newSize / this.blockSize);
+      const removedBlocks = descriptor.blocks.splice(remainsBlocksCount);
+      removedBlocks.forEach(blockId => {
+        this.bitmap[blockId] = 0;
+        this.blocks[blockId] = null;
+      });
     }
     descriptor.size = newSize;
   }
@@ -180,7 +189,7 @@ export class FS {
     descriptor.blocks.forEach(blockId => {
       this.bitmap[blockId] = 0;
       this.blocks[blockId] = null;
-    })
+    });
   }
 
   private getTheLowesFdCounter(): number {
