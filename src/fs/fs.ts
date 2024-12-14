@@ -156,8 +156,8 @@ export class FS {
     return [descriptorId, this.descriptors[descriptorId]];
   }
 
-  ls(): Record<string, any> {
-    const path = this.resolveFullPathname(this.cwd);
+  ls(pathname?: string): Record<string, any> {
+    const path = this.resolveFullPathname(this.cwd + pathname ? pathname : '');
     const descriptorId = this.directory[path];
     const descriptor = this.descriptors[descriptorId];
     const files = {
@@ -342,17 +342,20 @@ export class FS {
     const absolutePath = this.getAbsolutePathname(pathname);
     const parts = absolutePath.split('/').filter(Boolean);
     const stack = [];
-    for (const part of parts) {
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
       const stackPath = stack.join('/');
       const curPath = '/' + (stackPath.length === 0 ? part : stackPath + '/' + part);
       const descriptorId = this.getDescriptionId(curPath);
       const descriptor = this.descriptors[descriptorId];
       if (descriptor.type === DescriptorType.SYMLINK) {
         const symlinkPath = this.resolveSymlink(descriptor);
+        const residualParts = parts.slice(i + 1);
+        const residualPath = residualParts.length === 0 ? '' : '/' + residualParts.join('/');
         if (symlinkPath.startsWith('/')) {
-          return this.resolveFullPathname(symlinkPath);
+          return this.resolveFullPathname(symlinkPath + residualPath);
         }
-        return this.resolveFullPathname('/' + this.cwd + '/' + symlinkPath);
+        return this.resolveFullPathname('/' + this.cwd + residualPath);
       } else {
         stack.push(part);
       }

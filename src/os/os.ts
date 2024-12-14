@@ -57,9 +57,9 @@ export class OS {
     });
   }
 
-  ls(): void {
+  ls(pathname?: string): void {
     this.invokeMethod(() => {
-      const files = this.fs.ls();
+      const files = this.fs.ls(pathname);
       this.logger.log(
         Object.entries(files)
           .map(([fileName, info]) => (`${fileName} => ${info.descriptor.type}, ${info.descriptorId}`))
