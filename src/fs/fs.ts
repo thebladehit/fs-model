@@ -158,7 +158,7 @@ export class FS {
 
   ls(): Record<string, any> {
     const path = this.resolveFullPathname(this.cwd);
-    const descriptorId = this.directory[path]
+    const descriptorId = this.directory[path];
     const descriptor = this.descriptors[descriptorId];
     const files = {
       '.': { descriptor, descriptorId },
@@ -282,22 +282,24 @@ export class FS {
 
   link(pathname: string, newName: string): void {
     const path = this.resolveDirsName(pathname);
+    const newNamePath = this.resolveDirsName(newName);
     const descriptorId = this.getDescriptionId(path);
     if (this.directory[newName] !== undefined) {
       throw new Error(`File with name ${path} already exists`);
     }
     this.descriptors[descriptorId].links++;
-    this.directory[newName] = descriptorId;
+    this.directory[newNamePath] = descriptorId;
   }
 
-  unlink(fileName: string): void {
-    const descriptorId = this.getDescriptionId(fileName);
+  unlink(pathname: string): void {
+    const path = this.resolveDirsName(pathname);
+    const descriptorId = this.getDescriptionId(path);
     const descriptor = this.descriptors[descriptorId];
     descriptor.links--;
     if (descriptor.links === 0) {
       this.freeBlocks(descriptor, descriptorId);
     }
-    delete this.directory[fileName];
+    delete this.directory[path];
   }
 
   private resolveSymlink(descriptor: Descriptor): string {
