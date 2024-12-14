@@ -129,11 +129,12 @@ export class FS {
     this.directory[path] = descriptorId;
   }
 
-  create(fileName: string): void {
-    if (this.directory[fileName] !== undefined) {
-      throw new Error(`File with name ${fileName} already exists`);
+  create(pathname: string): void {
+    const path = this.resolveDirsName(pathname);
+    if (this.directory[path] !== undefined) {
+      throw new Error(`File with name ${path} already exists`);
     }
-    if (fileName.length > this.maxFileName) {
+    if (pathname.length > this.maxFileName) {
       throw new Error('File name should be shorter than ' + this.maxFileName);
     }
     const descriptorId = this.getFreeDescriptor();
@@ -146,7 +147,7 @@ export class FS {
       size: 0,
       blocks: [],
     };
-    this.directory[fileName] = descriptorId;
+    this.directory[path] = descriptorId;
   }
 
   stat(fileName: string): [number, Descriptor] {
@@ -359,7 +360,7 @@ export class FS {
   private getDescriptionId(fileName: string): number {
     const descriptorId = this.directory[fileName];
     if (descriptorId === undefined) {
-      throw new Error(`File ${fileName} not found`);
+      throw new Error(`File or directory ${fileName} not found`);
     }
     return descriptorId;
   }
