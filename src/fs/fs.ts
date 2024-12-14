@@ -157,7 +157,9 @@ export class FS {
   }
 
   ls(pathname?: string): Record<string, any> {
-    const path = this.resolveFullPathname(this.cwd + pathname ? pathname : '');
+    const path = this.resolveFullPathname(pathname && pathname.startsWith('/') ? pathname
+      : this.cwd + (pathname ? pathname : '')
+    );
     const descriptorId = this.directory[path];
     const descriptor = this.descriptors[descriptorId];
     const files = {
@@ -355,7 +357,7 @@ export class FS {
         if (symlinkPath.startsWith('/')) {
           return this.resolveFullPathname(symlinkPath + residualPath);
         }
-        return this.resolveFullPathname('/' + this.cwd + residualPath);
+        return this.resolveFullPathname('/' + this.cwd + symlinkPath + residualPath);
       } else {
         stack.push(part);
       }
