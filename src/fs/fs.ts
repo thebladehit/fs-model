@@ -176,8 +176,13 @@ export class FS {
     return files;
   }
 
-  open(fileName: string): number {
-    const descriptorId = this.getDescriptionId(fileName);
+  open(pathname: string): number {
+    const path = this.resolveFullPathname(pathname);
+    const descriptorId = this.getDescriptionId(path);
+    const descriptor = this.descriptors[descriptorId];
+    if (descriptor.type !== DescriptorType.REGULAR) {
+      throw new Error(`${pathname} is not a regular file`);
+    }
     const fd = this.getTheLowesFdCounter();
     this.openFiles[fd] = { descriptorId, offset: 0 };
     return fd;
