@@ -1,6 +1,7 @@
 export enum DescriptorType {
   REGULAR = 'file',
   DIRECTORY = 'directory',
+  SYMLINK = 'symlink',
 }
 
 export interface Descriptor {

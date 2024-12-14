@@ -19,6 +19,37 @@ export class OS {
     this.logger.log('File system is initialized');
   }
 
+  mkdir(dirName: string): void {
+    this.invokeMethod(() => {
+      this.fs.mkdir(dirName);
+    });
+  }
+
+  rmdir(dirName: string): void {
+    this.invokeMethod(() => {
+      this.fs.rmdir(dirName);
+    });
+  }
+
+  cd(dirName: string): void {
+    this.invokeMethod(() => {
+      this.fs.cd(dirName);
+    });
+  }
+
+  pwd(): void {
+    this.invokeMethod(() => {
+      const cwd = this.fs.pwd();
+      this.logger.log(cwd);
+    });
+  }
+
+  symlink(target: string, pathname: string): void {
+    this.invokeMethod(() => {
+      this.fs.symlink(target, pathname);
+    });
+  }
+
   stat(fileName: string): void {
     this.invokeMethod(() => {
       const [dId, d] = this.fs.stat(fileName);

@@ -5,10 +5,11 @@ export class FS {
   private blocks: (Buffer | null)[];
   private bitmap: number[];
   private descriptors: (Descriptor | null)[];
-  private directory: Record<string, number>;
+  private directory: Record<string, number>; // change name to tree
   private openFiles: Record<number, { descriptorId: number, offset: number }>;
   private fdCounter: boolean[];
   private maxFileName: number;
+  private cwd: string;
 
   constructor(blockSize: number, blockCount: number, descriptorsCount: number, maxFileName: number) {
     this.blockSize = blockSize;
@@ -19,6 +20,113 @@ export class FS {
     this.openFiles = {};
     this.fdCounter = [];
     this.maxFileName = maxFileName;
+    this.cwd = '';
+    this.initRootDir();
+  }
+
+  private initRootDir(): void {
+    const descriptorId = 0;
+    this.descriptors[descriptorId] = {
+      type: DescriptorType.DIRECTORY,
+      links: 3,
+      size: 0,
+      blocks: [], // mb delete
+    };
+    this.directory['/'] = descriptorId;
+  }
+
+  mkdir(pathname: string): void {
+    if (pathname.length > this.maxFileName) {
+      throw new Error('Directory name should be shorter than ' + this.maxFileName);
+    }
+    const path = this.resolveDirsName(pathname);
+    if (this.directory[path] !== undefined) {
+      throw new Error(`Directory ${pathname} already exists`);
+    }
+    const descriptorId = this.getFreeDescriptor();
+    if (descriptorId === -1) {
+      throw new Error('No free descriptor');
+    }
+    this.descriptors[descriptorId] = {
+      type: DescriptorType.DIRECTORY,
+      links: 2,
+      size: 0,
+      blocks: [],
+    };
+    this.directory[path] = descriptorId;
+    this.increaseLinkForPreviousFolder(path);
+  }
+
+  rmdir(pathname: string): void {
+    const path = this.resolveFullPathname(pathname);
+    if (path === '/') {
+      throw new Error('You can not delete this folder');
+    }
+    if (path === this.cwd) {
+      throw new Error('You can not delete this from current CWD');
+    }
+    const descriptorId = this.getDescriptionId(path);
+    const descriptor = this.descriptors[descriptorId];
+    if (descriptor.type !== DescriptorType.DIRECTORY) {
+      throw new Error(`${pathname} is not a directory`);
+    }
+    if (descriptor.links > 2) {
+      throw new Error(`Directory ${pathname} is not empty`);
+    }
+    this.descriptors[descriptorId] = null;
+    delete this.directory[path];
+    this.decreaseLinkForPreviousFolder(path)
+  }
+
+  cd(pathname: string): void {
+    const path = this.resolveFullPathname(pathname);
+    const descriptorId = this.getDescriptionId(path);
+    const descriptor = this.descriptors[descriptorId];
+    if (descriptor.type !== DescriptorType.DIRECTORY) {
+      throw new Error(`${pathname} is not a directory`);
+    }
+    if (this.directory[path] === undefined) {
+      throw new Error(`Directory ${pathname} does not exist`);
+    }
+    this.cwd = this.getAbsolutePathname(pathname);
+  }
+
+  pwd(): string {
+    return this.cwd.length === 0 ? '/' : this.cwd;
+  }
+
+  symlink(target: string, pathname: string): void {
+    const path = this.resolveDirsName(pathname);
+    if (this.directory[path] !== undefined) {
+      throw new Error(`File ${path} already exists`);
+    }
+    if (pathname.length > this.maxFileName) {
+      throw new Error(`File name should be shorter than ${this.maxFileName}`);
+    }
+    if (target.length > this.blockSize) {
+      throw new Error('Target path exceeds maximum block size');
+    }
+    const descriptorId = this.getFreeDescriptor();
+    if (descriptorId === -1) {
+      throw new Error('No free descriptor');
+    }
+    this.descriptors[descriptorId] = {
+      type: DescriptorType.SYMLINK,
+      links: 1,
+      size: target.length,
+      blocks: [],
+    };
+    const blockId = this.getFreeBlock();
+    if (blockId === -1) {
+      throw new Error('No free block');
+    }
+    this.bitmap[blockId] = 1;
+    const descriptor = this.descriptors[descriptorId];
+    descriptor.blocks.push(blockId);
+    this.blocks[blockId] = Buffer.alloc(this.blockSize);
+    const block = this.blocks[blockId];
+    block.write(target, 0, 'utf-8');
+    this.directory[path] = descriptorId;
   }
 
   create(fileName: string): void {
@@ -165,6 +273,87 @@ export class FS {
       this.freeBlocks(descriptor, descriptorId);
     }
     delete this.directory[fileName];
+  }
+
+  private resolveSymlink(descriptor: Descriptor): string {
+    const blockId = descriptor.blocks[0];
+    const block = this.blocks[blockId];
+    return block.slice(0, descriptor.size).toString();
+  }
+
+  private normalizePath(pathname: string): string {
+
+    const parts = pathname.split('/').filter(Boolean);
+    const stack = [];
+    for (const part of parts) {
+      if (part === '.') continue;
+      if (part === '..') {
+        if (stack.length === 0) continue;
+        stack.pop();
+      } else {
+       stack.push(part);
+      }
+    }
+    return '/' + stack.join('/');
+  }
+
+  getAbsolutePathname(pathname: string): string {
+    if (pathname.startsWith('/')) {
+      return this.normalizePath(pathname);
+    }
+    return this.normalizePath(this.cwd + '/' + pathname);
+  }
+
+  resolveFullPathname(pathname: string): string {
+    const absolutePath = this.getAbsolutePathname(pathname);
+    const parts = absolutePath.split('/').filter(Boolean);
+    const stack = [];
+    for (const part of parts) {
+      const stackPath = stack.join('/');
+      const curPath = '/' + (stackPath.length === 0 ? part : stackPath + '/' + part);
+      const descriptorId = this.getDescriptionId(curPath);
+      const descriptor = this.descriptors[descriptorId];
+      if (descriptor.type === DescriptorType.SYMLINK) {
+        const symlinkPath = this.resolveSymlink(descriptor);
+        if (symlinkPath.startsWith('/')) {
+          return this.resolveFullPathname(symlinkPath);
+        }
+        return this.resolveFullPathname('/' + this.cwd + '/' + symlinkPath);
+      } else {
+        stack.push(part);
+      }
+    }
+    return '/' + stack.join('/');
+  }
+
+  resolveDirsName(pathname: string): string {
+    const absolutePath = this.getAbsolutePathname(pathname);
+    console.log(absolutePath)
+    const parts = absolutePath.split('/');
+    const lastPart = parts.pop();
+    const dirsName = '/' + parts.join('/');
+    return dirsName.length === 1 ? '/' + lastPart
+      : this.resolveFullPathname(dirsName) + '/' + lastPart;
+  }
+
+  private increaseLinkForPreviousFolder(pathname: string): void {
+    const path = pathname.split('/');
+    path.pop();
+    let previousFolderPath = path.join('/');
+    if (previousFolderPath.length === 0) previousFolderPath = '/';
+    const descriptorId = this.getDescriptionId(previousFolderPath);
+    const descriptor =  this.descriptors[descriptorId];
+    descriptor.links++;
+  }
+
+  private decreaseLinkForPreviousFolder(pathname: string): void {
+    const path = pathname.split('/');
+    path.pop();
+    let previousFolderPath = path.join('/');
+    if (previousFolderPath.length === 0) previousFolderPath = '/';
+    const descriptorId = this.getDescriptionId(previousFolderPath);
+    const descriptor =  this.descriptors[descriptorId];
+    descriptor.links--;
   }
 
   private getDescriptionId(fileName: string): number {
