@@ -302,7 +302,7 @@ export class FS {
     const descriptorId = this.getDescriptionId(path);
     const descriptor = this.descriptors[descriptorId];
     if (descriptor.type === DescriptorType.DIRECTORY) {
-      throw new Error('You can not create unlink directory');
+      throw new Error('You can not unlink directory');
     }
     descriptor.links--;
     if (descriptor.links === 0) {
