@@ -150,8 +150,9 @@ export class FS {
     this.directory[path] = descriptorId;
   }
 
-  stat(fileName: string): [number, Descriptor] {
-    const descriptorId = this.getDescriptionId(fileName);
+  stat(pathName: string): [number, Descriptor] {
+    const path = this.resolveDirsName(pathName);
+    const descriptorId = this.getDescriptionId(path);
     return [descriptorId, this.descriptors[descriptorId]];
   }
 
