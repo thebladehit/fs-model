@@ -280,10 +280,11 @@ export class FS {
     descriptor.size = newSize;
   }
 
-  link(fileName: string, newName: string): void {
-    const descriptorId = this.getDescriptionId(fileName);
+  link(pathname: string, newName: string): void {
+    const path = this.resolveDirsName(pathname);
+    const descriptorId = this.getDescriptionId(path);
     if (this.directory[newName] !== undefined) {
-      throw new Error(`File with name ${fileName} already exists`);
+      throw new Error(`File with name ${path} already exists`);
     }
     this.descriptors[descriptorId].links++;
     this.directory[newName] = descriptorId;
