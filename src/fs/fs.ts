@@ -265,8 +265,9 @@ export class FS {
     return bytesRead;
   }
 
-  truncate(fileName: string, newSize: number): void {
-    const descriptorId = this.getDescriptionId(fileName);
+  truncate(pathname: string, newSize: number): void {
+    const path = this.resolveFullPathname(pathname);
+    const descriptorId = this.getDescriptionId(path);
     const descriptor = this.descriptors[descriptorId];
     if (newSize < descriptor.size) {
       const remainsBlocksCount = Math.floor(newSize / this.blockSize);
