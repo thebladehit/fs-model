@@ -1,4 +1,4 @@
-# Lab 4
+# FS model (lab5)
 
 ### How to run
 ```shell
