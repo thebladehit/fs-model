@@ -28,9 +28,9 @@ export class FS {
     const descriptorId = 0;
     this.descriptors[descriptorId] = {
       type: DescriptorType.DIRECTORY,
-      links: 3,
+      links: 2,
       size: 0,
-      blocks: [], // mb delete
+      blocks: [],
     };
     this.directory['/'] = descriptorId;
   }
@@ -284,6 +284,10 @@ export class FS {
     const path = this.resolveDirsName(pathname);
     const newNamePath = this.resolveDirsName(newName);
     const descriptorId = this.getDescriptionId(path);
+    const descriptor = this.descriptors[descriptorId];
+    if (descriptor.type === DescriptorType.DIRECTORY) {
+      throw new Error('You can not create link for directory');
+    }
     if (this.directory[newName] !== undefined) {
       throw new Error(`File with name ${path} already exists`);
     }
@@ -295,6 +299,9 @@ export class FS {
     const path = this.resolveDirsName(pathname);
     const descriptorId = this.getDescriptionId(path);
     const descriptor = this.descriptors[descriptorId];
+    if (descriptor.type === DescriptorType.DIRECTORY) {
+      throw new Error('You can not create unlink directory');
+    }
     descriptor.links--;
     if (descriptor.links === 0) {
       this.freeBlocks(descriptor, descriptorId);
