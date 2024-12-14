@@ -1,14 +1,14 @@
 import { Descriptor, DescriptorType } from '../interfaces/descriptor';
 
 export class FS {
-  private blockSize: number;
-  private blocks: (Buffer | null)[];
-  private bitmap: number[];
-  private descriptors: (Descriptor | null)[];
-  private directory: Record<string, number>; // change name to tree
-  private openFiles: Record<number, { descriptorId: number, offset: number }>;
+  private readonly blockSize: number;
+  private readonly blocks: (Buffer | null)[];
+  private readonly bitmap: number[];
+  private readonly descriptors: (Descriptor | null)[];
+  private readonly directory: Record<string, number>; // change name to tree
+  private readonly openFiles: Record<number, { descriptorId: number, offset: number }>;
+  private readonly maxFileName: number;
   private fdCounter: boolean[];
-  private maxFileName: number;
   private cwd: string;
 
   constructor(blockSize: number, blockCount: number, descriptorsCount: number, maxFileName: number) {
