@@ -62,7 +62,7 @@ export class OS {
       const files = this.fs.ls();
       this.logger.log(
         Object.entries(files)
-          .map(([fileName, dId]) => (`${fileName} => ${dId}`))
+          .map(([fileName, info]) => (`${fileName} => ${info.descriptor.type}, ${info.descriptorId}`))
           .join('\n'),
       );
     });

@@ -75,7 +75,7 @@ export class FS {
     }
     this.descriptors[descriptorId] = null;
     delete this.directory[path];
-    this.decreaseLinkForPreviousFolder(path)
+    this.decreaseLinkForPreviousFolder(path);
   }
 
   cd(pathname: string): void {
@@ -156,8 +156,24 @@ export class FS {
     return [descriptorId, this.descriptors[descriptorId]];
   }
 
-  ls(): Record<string, number> {
-    return this.directory;
+  ls(): Record<string, any> {
+    const path = this.resolveFullPathname(this.cwd);
+    const descriptorId = this.directory[path]
+    const descriptor = this.descriptors[descriptorId];
+    const files = {
+      '.': { descriptor, descriptorId },
+      '..': { descriptor, descriptorId },
+    };
+    for (const [filePath, dId] of Object.entries(this.directory)) {
+      if (filePath.startsWith(path) && filePath !== path) {
+        const fileName = filePath.substring(filePath.lastIndexOf('/') + 1);
+        files[fileName] = {
+          descriptor: this.descriptors[dId],
+          descriptorId: dId,
+        };
+      }
+    }
+    return files;
   }
 
   open(fileName: string): number {
@@ -293,7 +309,7 @@ export class FS {
         if (stack.length === 0) continue;
         stack.pop();
       } else {
-       stack.push(part);
+        stack.push(part);
       }
     }
     return '/' + stack.join('/');
@@ -330,7 +346,6 @@ export class FS {
 
   resolveDirsName(pathname: string): string {
     const absolutePath = this.getAbsolutePathname(pathname);
-    console.log(absolutePath)
     const parts = absolutePath.split('/');
     const lastPart = parts.pop();
     const dirsName = '/' + parts.join('/');
@@ -344,7 +359,7 @@ export class FS {
     let previousFolderPath = path.join('/');
     if (previousFolderPath.length === 0) previousFolderPath = '/';
     const descriptorId = this.getDescriptionId(previousFolderPath);
-    const descriptor =  this.descriptors[descriptorId];
+    const descriptor = this.descriptors[descriptorId];
     descriptor.links++;
   }
 
@@ -354,7 +369,7 @@ export class FS {
     let previousFolderPath = path.join('/');
     if (previousFolderPath.length === 0) previousFolderPath = '/';
     const descriptorId = this.getDescriptionId(previousFolderPath);
-    const descriptor =  this.descriptors[descriptorId];
+    const descriptor = this.descriptors[descriptorId];
     descriptor.links--;
   }
 
