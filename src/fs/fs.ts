@@ -318,7 +318,6 @@ export class FS {
   }
 
   private normalizePath(pathname: string): string {
-
     const parts = pathname.split('/').filter(Boolean);
     const stack = [];
     for (const part of parts) {
@@ -357,7 +356,7 @@ export class FS {
         if (symlinkPath.startsWith('/')) {
           return this.resolveFullPathname(symlinkPath + residualPath);
         }
-        return this.resolveFullPathname('/' + this.cwd + symlinkPath + residualPath);
+        return this.resolveFullPathname('/' + stackPath + '/' + symlinkPath + residualPath);
       } else {
         stack.push(part);
       }
