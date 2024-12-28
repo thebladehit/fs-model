@@ -7,6 +7,16 @@ const os = new OS(logger, config);
 
 // examples for fifth lab
 os.mkfs(15);
+// os.cd('/');
+// os.mkdir('dir1');
+// os.mkdir('dir1/dir2');
+// os.create('dir1/file.txt');
+// os.symlink('../file.txt', '/dir1/dir2/ln');
+// os.open('dir1/dir2/ln');
+// os.write(0, 2, 'ff');
+// os.open('dir1/file.txt');
+// os.read(1, 10);
+
 os.mkdir('dir1');
 os.stat('dir1');
 os.mkdir('dir1/dir2');
@@ -20,7 +30,6 @@ os.mkdir('/a/b');
 os.symlink('/dir1', '/a/b/l1');
 os.ls('/a/b');
 os.open('/a/b/l1/dir2/file.txt');
-os.cd('..');
 os.pwd();
 os.symlink('dir2/./../../dir1/././dir2/file.txt', '/dir1/l2');
 os.cd('/a/b');
@@ -37,7 +46,7 @@ os.ls('/a/b');
 os.stat('/a/b/document');
 os.stat('/dir1/dir2/data.txt');
 os.open('dir1/dir2/data.txt');
-os.create('some');
+os.create('/dir1/dir2/some');
 os.open('/dir1/dir2/data.txt');
 os.mkdir('/1');
 os.mkdir('/1/2');
